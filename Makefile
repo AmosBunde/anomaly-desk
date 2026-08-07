@@ -32,9 +32,28 @@ help: ## List every target
 # Development
 # ---------------------------------------------------------------------------
 
+# PyTorch arrives transitively through sentence-transformers, and its default wheel on
+# Linux depends on the full CUDA stack: cuBLAS, cuDNN, cuFFT, nvrtc and the rest. That is
+# several gigabytes of GPU libraries on a machine with no GPU, and it contradicts the
+# hardware constraint in README.md section 4 that no stage of this project requires one.
+# Installing the CPU-only build first from the PyTorch CPU index satisfies the dependency,
+# so the second command resolves it as already present and never reaches the CUDA wheels.
+# Measured difference: 191 MB against 526 MB for torch alone, before CUDA.
+TORCH_CPU_INDEX ?= https://download.pytorch.org/whl/cpu
+
 .PHONY: install
-install: ## Install the package and development dependencies
+install: ## Install the package and development dependencies, CPU-only
+	$(PYTHON) -m pip install torch --index-url $(TORCH_CPU_INDEX)
 	$(PYTHON) -m pip install -e '.[dev]'
+	@printf '\033[32mInstalled. Verifying no CUDA packages were pulled in.\033[0m\n'
+	@if $(PYTHON) -m pip list 2>/dev/null | grep -qiE '^(nvidia-|cuda-)'; then \
+		printf '\033[31mCUDA packages are present. This machine has no GPU and README.md\n'; \
+		printf 'section 4 forbids requiring one. Investigate before continuing.\033[0m\n'; \
+		$(PYTHON) -m pip list | grep -iE '^(nvidia-|cuda-)'; \
+		exit 1; \
+	else \
+		printf 'No CUDA packages present, as required.\n'; \
+	fi
 
 .PHONY: lint
 lint: ## Run ruff check and format check

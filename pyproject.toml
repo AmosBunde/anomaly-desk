@@ -19,7 +19,10 @@ dependencies = [
     "confluent-kafka>=2.4",         # section 2, streaming plane
     "psycopg[binary]>=3.1",         # section 2, PostgreSQL
     "pgvector>=0.2.5",              # section 7, vector search inside PostgreSQL
-    "sentence-transformers>=3.0",   # section 4, embeddings are always local
+    # section 4, embeddings are always local. Pulls PyTorch transitively; install with
+    # `make install`, which sources the CPU-only torch wheel first. The default Linux
+    # wheel depends on the full CUDA stack, which this machine has no GPU to use.
+    "sentence-transformers>=3.0",
     "fastapi>=0.111",               # section 2, API service
     "uvicorn[standard]>=0.30",      # section 15, make serve
     "opentelemetry-sdk>=1.25",      # section 11, spans per event and per hop

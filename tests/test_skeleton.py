@@ -127,3 +127,25 @@ def test_requires_python_matches_the_running_interpreter():
         config = tomllib.load(handle)
     assert config["project"]["requires-python"] == ">=3.12"
     assert sys.version_info >= (3, 12)
+
+
+def test_install_target_uses_cpu_only_torch():
+    """No stage of this project may require a GPU, per README.md section 4.
+
+    sentence-transformers pulls PyTorch, whose default Linux wheel depends on the full CUDA
+    stack. On a machine with no GPU that is several gigabytes that can never execute, so
+    make install sources the CPU-only build first and then fails if any CUDA package is
+    present. This test guards the mechanism against a well-meaning simplification of the
+    install target back to a single pip command.
+    """
+    makefile = (REPO_ROOT / "Makefile").read_text()
+    assert "download.pytorch.org/whl/cpu" in makefile, (
+        "make install must source the CPU-only torch wheel; the default wheel depends on CUDA"
+    )
+    assert "pip install torch --index-url" in makefile, (
+        "the CPU-only torch install must precede the package install, otherwise the "
+        "dependency resolves against the default CUDA-dependent wheel"
+    )
+    assert re.search(r"grep -qiE '\^\(nvidia-\|cuda-\)'", makefile), (
+        "make install must verify no CUDA packages were pulled in and fail if any were"
+    )
