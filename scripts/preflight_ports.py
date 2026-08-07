@@ -27,6 +27,8 @@ PORTS = [
     ("api", "API_PORT", 8000),
     ("ui", "UI_PORT", 3000),
     ("otel-collector", "OTEL_GRPC_PORT", 4317),
+    ("otel-collector", "OTEL_HTTP_PORT", 4318),
+    ("otel-collector", "OTEL_HEALTH_PORT", 13133),
 ]
 
 OUR_CONTAINERS = ("anomaly-postgres", "anomaly-kafka", "anomaly-api", "anomaly-ui", "anomaly-otel")
