@@ -1,0 +1,192 @@
+# Anomaly Desk local stack, per README.md section 2.
+#
+# Five services inside a measured budget of roughly 7 GB of available memory on the
+# development machine. Two topology decisions were raised with the owner before this file
+# was written and both were confirmed; they are recorded in the deviation section of
+# BREAKDOWN.md rather than assumed here:
+#
+#   1. The vector store lives inside PostgreSQL via pgvector rather than as a separate
+#      service. One store to back up, and the citation-to-chunk join stays inside a single
+#      query, which is what makes judge span verification in section 7 straightforward.
+#   2. Kafka runs as a single broker in KRaft mode with no ZooKeeper. Durability buys
+#      little because the event source is a replayable fixed offset list, so a lost
+#      partition is recovered by re-running make replay.
+#
+# Every service declares a health check, and dependants wait on service_healthy. A stack
+# that reports itself up before PostgreSQL accepts connections produces failures at A8 that
+# look like schema bugs.
+#
+# Memory limits are declared so the stack fails against the budget loudly rather than
+# meeting the kernel out-of-memory killer, which presents as an unexplained container death.
+
+name: anomaly-desk
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: anomaly-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-anomalydesk}
+      POSTGRES_USER: ${POSTGRES_USER:-anomalydesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anomalydesk}
+      # Deterministic collation. A locale difference between machines changes index
+      # ordering, which would show up much later as an unreproducible retrieval result.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Creates the vector extension on first boot. A8 owns the schema itself.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # pg_isready alone reports readiness before the init scripts finish, so the check
+      # also confirms the extension A19 depends on actually exists.
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U ${POSTGRES_USER:-anomalydesk} -d ${POSTGRES_DB:-anomalydesk} &&
+          psql -U ${POSTGRES_USER:-anomalydesk} -d ${POSTGRES_DB:-anomalydesk}
+          -tAc "select 1 from pg_extension where extname='vector'" | grep -q 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.7.1
+    container_name: anomaly-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >-
+        PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # Single broker, so every replication factor is 1. Leaving these at their defaults
+      # of 3 makes internal topic creation fail on a one-node cluster, and the symptom is
+      # a broker that appears healthy while every produce call times out.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      # Bounded heap. The default sizes itself from host memory, which on a 30 GB machine
+      # reserves far more than this stack's share of the 7 GB actually available.
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
+      CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: anomaly-otel
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./docker/otel/config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "13133:13133" # health_check extension
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: anomaly-api
+    environment:
+      MODEL_BACKEND: ${MODEL_BACKEND:-api}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-anomalydesk}
+      POSTGRES_USER: ${POSTGRES_USER:-anomalydesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anomalydesk}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: anomaly-desk-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200
+          else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: ../docker/ui.Dockerfile
+    container_name: anomaly-ui
+    ports:
+      - "${UI_PORT:-3000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  kafka-data:
