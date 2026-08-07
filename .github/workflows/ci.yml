@@ -1,0 +1,136 @@
+name: CI
+
+# Specification section 16.7 states that merges happen only with continuous integration
+# green. A1 and A2 could not satisfy that rule, because the pipeline it describes is this
+# file and it did not exist yet. From here forward the rule is enforceable.
+#
+# Jobs fail independently so a prose defect and a test failure are distinguishable at a
+# glance rather than requiring a log read.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install ruff only
+        run: python -m pip install "ruff>=0.5"
+      - run: python -m ruff check .
+      - run: python -m ruff format --check .
+
+  test:
+    name: test (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      # The suite asserts structure and does not import anthropic, torch, or kafka, so it
+      # runs without the heavy runtime dependencies. The full install is verified by the
+      # install job below, which is the slow one.
+      - name: Install package without runtime dependencies
+        # pyyaml is installed explicitly because tests/test_ci_workflow.py parses this
+        # workflow to assert its structure. It is also a runtime dependency, but --no-deps
+        # skips it, so naming it here keeps the reason visible.
+        run: |
+          python -m pip install -e . --no-deps
+          python -m pip install "pytest>=8.2" "pytest-cov>=5.0" "pyyaml>=6.0"
+      - name: Run tests with coverage reported but not gated
+        # A coverage threshold on a codebase this young measures nothing and would have to
+        # be argued down later. It is reported so the trend is visible from the first run.
+        run: python -m pytest --cov=anomalydesk --cov-report=term-missing
+
+  prose:
+    name: prose (house style and diagram sync)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Enforce principle 9 across tracked Markdown
+        run: python scripts/prose_lint.py
+      - name: Check the architecture page against the Mermaid source
+        # Delivered by A6. Skips with an explicit message until then rather than passing
+        # silently, so the gap is visible in the log.
+        run: |
+          if [ -f scripts/diagram_sync.py ]; then
+            python scripts/diagram_sync.py
+          else
+            echo "::notice::diagram_sync.py is delivered by A6; skipping until then"
+          fi
+
+  install:
+    name: install (CPU-only, no CUDA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      # This job exists because of a defect found in A2. sentence-transformers pulls
+      # PyTorch, whose default Linux wheel depends on the full CUDA stack, and nothing in
+      # the dependency declaration mentions CUDA. Reading the list cannot catch it, so the
+      # pipeline installs for real and asserts the outcome.
+      - name: make install
+        run: make install
+      - name: Assert the CPU-only build and the absence of CUDA
+        run: |
+          python -c "import torch; assert not torch.cuda.is_available(); print(torch.__version__)"
+          python -c "import torch, sys; sys.exit(0 if '+cpu' in torch.__version__ else 1)"
+          if python -m pip list | grep -iE '^(nvidia-|cuda-)'; then
+            echo "::error::CUDA packages present. README.md section 4 forbids requiring a GPU."
+            exit 1
+          fi
+          echo "No CUDA packages present, as required."
+
+  smoke:
+    name: smoke evaluation slice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package without runtime dependencies
+        run: python -m pip install -e . --no-deps
+      # Declared now so wiring A14 in later is not a change to the pipeline shape. The
+      # target currently exits non-zero naming A14, which is correct behavior rather than a
+      # failure, so this step distinguishes the two instead of treating any non-zero as red.
+      - name: Run make smoke once A14 has landed
+        run: |
+          output=$(make smoke 2>&1) && status=0 || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "$output"
+            exit 0
+          fi
+          if printf '%s' "$output" | grep -q "is not implemented yet"; then
+            echo "::notice::make smoke is delivered by A14; skipping until then"
+            exit 0
+          fi
+          echo "$output"
+          echo "::error::make smoke failed for a reason other than being unimplemented"
+          exit 1
