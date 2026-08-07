@@ -1,0 +1,41 @@
+# Single-node kind cluster for the local Kubernetes path, per README.md section 17.
+#
+# One node rather than a control plane plus workers. The stack this cluster hosts measured
+# 450 MB idle with limits summing to 3 GB, against roughly 6.9 GB available on the
+# development machine, so a second node would spend memory to exercise scheduling behavior
+# that A38 does not depend on.
+#
+# Host ports and the bind address are substituted from the environment by
+# scripts/render_kind_config.py, using the same variables and the same section 15 defaults as
+# docker-compose.yml. kind does not interpolate its own config, and hardcoding 8000 and 3000
+# made cluster creation fail on this machine, where another project already holds both on
+# loopback. That is the same defect class as issue 11, on a third surface.
+#
+# A5 proves the cluster starts and measures what it costs. A38 owns the manifests.
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: anomaly-desk
+
+nodes:
+  - role: control-plane
+    # extraPortMappings publishes through the node to the host. listenAddress is loopback
+    # for the same reason the Compose stack binds loopback: the default is 0.0.0.0, which on
+    # an untrusted network exposes whatever is behind it. See issue 11.
+    extraPortMappings:
+      - containerPort: 30800   # API service NodePort
+        hostPort: ${API_PORT}
+        listenAddress: "${BIND_ADDRESS}"
+        protocol: TCP
+      - containerPort: 30300   # operator console NodePort
+        hostPort: ${UI_PORT}
+        listenAddress: "${BIND_ADDRESS}"
+        protocol: TCP
+    kubeadmConfigPatches:
+      # Labels the node as ingress-ready so A38 can schedule an ingress controller without
+      # changing this file.
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"

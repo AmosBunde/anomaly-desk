@@ -13,6 +13,7 @@ PYTHON ?= python3
 KIND_VERSION    ?= v0.23.0
 KUBECTL_VERSION ?= v1.30.2
 HELM_VERSION    ?= v3.15.2
+KIND_CLUSTER    ?= anomaly-desk
 
 # Prints the message for a target that is declared but not yet implemented, then fails.
 define pending
@@ -147,13 +148,33 @@ stack-report: ## Print measured memory use per service against its declared limi
 # Kubernetes
 # ---------------------------------------------------------------------------
 
+.PHONY: k8s-tools
+k8s-tools: ## Install pinned kind, kubectl, and helm into ./bin
+	@KIND_VERSION=$(KIND_VERSION) KUBECTL_VERSION=$(KUBECTL_VERSION) \
+	 HELM_VERSION=$(HELM_VERSION) bash scripts/install_k8s_tools.sh
+
 .PHONY: kind-up
-kind-up: ## (A5) Install pinned tooling into ./bin and create the local cluster
-	$(call pending,make kind-up,A5)
+kind-up: k8s-tools ## Create the local Kubernetes cluster, idempotently
+	@$(PYTHON) scripts/preflight_ports.py --kind
+	@if ./bin/kind get clusters 2>/dev/null | grep -qx '$(KIND_CLUSTER)'; then \
+		printf 'Cluster %s already exists.\n' '$(KIND_CLUSTER)'; \
+	else \
+		$(PYTHON) scripts/render_kind_config.py | ./bin/kind create cluster --config - --wait 120s; \
+	fi
+	@./bin/kubectl --context kind-$(KIND_CLUSTER) cluster-info
+	@printf '\033[32mCluster ready. Context: kind-%s\033[0m\n' '$(KIND_CLUSTER)'
 
 .PHONY: kind-down
-kind-down: ## (A5) Delete the local cluster
-	$(call pending,make kind-down,A5)
+kind-down: ## Delete the local cluster; succeeds when there is nothing to delete
+	@if [ -x ./bin/kind ] && ./bin/kind get clusters 2>/dev/null | grep -qx '$(KIND_CLUSTER)'; then \
+		./bin/kind delete cluster --name '$(KIND_CLUSTER)'; \
+	else \
+		printf 'No cluster named %s; nothing to delete.\n' '$(KIND_CLUSTER)'; \
+	fi
+
+.PHONY: kind-report
+kind-report: ## Print the measured memory cost of the idle cluster
+	@$(PYTHON) scripts/kind_report.py
 
 .PHONY: deploy
 deploy: ## (A38) Deploy to the local cluster

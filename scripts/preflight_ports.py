@@ -15,6 +15,7 @@ defaults cannot simply be moved.
 
 from __future__ import annotations
 
+import argparse
 import os
 import socket
 import subprocess
@@ -31,7 +32,23 @@ PORTS = [
     ("otel-collector", "OTEL_HEALTH_PORT", 13133),
 ]
 
-OUR_CONTAINERS = ("anomaly-postgres", "anomaly-kafka", "anomaly-api", "anomaly-ui", "anomaly-otel")
+# The kind node publishes the API and console host ports through extraPortMappings, so the
+# cluster collides with exactly the same host ports as the Compose stack. A5 found this the
+# hard way: cluster creation failed on 127.0.0.1:3000, held by another project on this
+# machine, with the same opaque Docker error the Compose preflight was written to replace.
+KIND_PORTS = [
+    ("kind node (API NodePort)", "API_PORT", 8000),
+    ("kind node (console NodePort)", "UI_PORT", 3000),
+]
+
+OUR_CONTAINERS = (
+    "anomaly-postgres",
+    "anomaly-kafka",
+    "anomaly-api",
+    "anomaly-ui",
+    "anomaly-otel",
+    "anomaly-desk-control-plane",
+)
 
 
 def load_dotenv() -> dict[str, str]:
@@ -82,10 +99,19 @@ def holder(port: int) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--kind",
+        action="store_true",
+        help="check the kind node host ports instead of the Compose service ports",
+    )
+    args = parser.parse_args()
+    checks = KIND_PORTS if args.kind else PORTS
+
     # Shell environment wins over .env, matching Compose precedence.
     dotenv = load_dotenv()
     conflicts = []
-    for service, env_var, default in PORTS:
+    for service, env_var, default in checks:
         port = int(os.getenv(env_var, dotenv.get(env_var, default)))
         if in_use(port):
             conflicts.append((service, env_var, port, holder(port)))
@@ -103,6 +129,13 @@ def main() -> int:
         "the ports above when other stacks are running.",
         file=sys.stderr,
     )
+    if args.kind:
+        print(
+            "\nThe kind node publishes these through extraPortMappings, so it collides with\n"
+            "the same host ports as the Compose stack. Running both at once needs different\n"
+            "ports for each, or the Compose stack stopped first.",
+            file=sys.stderr,
+        )
     return 1
 
 
