@@ -239,7 +239,7 @@ attention it would consume.
 | A3 | 4 | 10 | Merged |
 | A4 | 5 | 9 | Merged |
 | A5 | 6 | 13 | In review |
-| A6 | 7 | not yet started | Open |
+| A6 | 7 | 14 | In review |
 | A40 | 11 | 12 | In review |
 
 A40 is a defect fix against A3 rather than a planned item, added when an automated security review
