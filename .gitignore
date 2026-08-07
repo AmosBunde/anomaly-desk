@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node and the operator console
+node_modules/
+ui/dist/
+ui/build/
+*.tsbuildinfo
+
+# Fetched and derived data. The committed demo slice under runbooks/demo/ is tracked.
+runbooks/raw/
+runbooks/normalized/
+data/raw/
+data/normalized/
+
+# Evaluation run outputs. Promoted scoreboards are committed explicitly with -f.
+runs/*
+!runs/.gitkeep
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Kubernetes and tooling
+bin/
+kubeconfig
+*.kubeconfig
+
+# Editor and operating system
+.DS_Store
+.idea/
+*.swp
