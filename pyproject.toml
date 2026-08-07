@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anomaly-desk"
+version = "0.1.0"
+description = "An agentic triage system with a judge scoring it, and an operator override rate scoring the judge."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Amos Bunde" }]
+
+# Every dependency below is implied by a section of README.md. Adding one that is not
+# is an owner decision, per section 4 and the deviation policy in BREAKDOWN.md.
+dependencies = [
+    "anthropic>=0.40",              # section 4, model backends
+    "pydantic>=2.7",                # section 6, typed contracts between agents
+    "confluent-kafka>=2.4",         # section 2, streaming plane
+    "psycopg[binary]>=3.1",         # section 2, PostgreSQL
+    "pgvector>=0.2.5",              # section 7, vector search inside PostgreSQL
+    # section 4, embeddings are always local. Pulls PyTorch transitively; install with
+    # `make install`, which sources the CPU-only torch wheel first. The default Linux
+    # wheel depends on the full CUDA stack, which this machine has no GPU to use.
+    "sentence-transformers>=3.0",
+    "fastapi>=0.111",               # section 2, API service
+    "uvicorn[standard]>=0.30",      # section 15, make serve
+    "opentelemetry-sdk>=1.25",      # section 11, spans per event and per hop
+    "opentelemetry-exporter-otlp>=1.25",
+    "pyyaml>=6.0",                  # section 9, escalation policy is configuration
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5",
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+]
+
+[project.urls]
+Repository = "https://github.com/AmosBunde/anomaly-desk"
+
+[tool.setuptools.packages.find]
+include = ["anomalydesk*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

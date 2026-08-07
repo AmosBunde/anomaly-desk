@@ -233,6 +233,15 @@ Every agent call records `input_tokens`, `output_tokens`, `cache_read_input_toke
 are the only place rates are written down; the ledger stores tokens and resolves rates at report time, so a
 price change does not require reprocessing history.
 
+No stage of this project requires a graphics processing unit, and that constraint is enforced rather than
+stated. The pinned embedding model arrives through `sentence-transformers`, which depends on PyTorch, whose
+default Linux wheel in turn depends on the full CUDA stack: cuBLAS, cuDNN, cuFFT, and the rest. On a machine
+with no GPU those are several gigabytes of libraries that can never execute. `make install` therefore installs
+the CPU-only PyTorch build from the PyTorch CPU index before installing this package, so the dependency is
+already satisfied when the second step resolves it, and the target fails loudly if any package matching
+`nvidia-` or `cuda-` is present afterward. The measured difference for PyTorch alone is 191 megabytes against
+526 megabytes, before the CUDA packages themselves are counted.
+
 Changing the judge model or the agent model is a reviewed design decision with its own pull request, and it
 is never a side effect of other work. Because the judge and the agents share a model family, every judge
 change is accompanied by a re-run of the human-scored subsample described in section 8.

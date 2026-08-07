@@ -222,12 +222,23 @@ merged pull request through a development branch.
 Updated as each issue is opened. A plan identifier with no GitHub number has not been opened yet, which is a
 statement of current state rather than a gap to be filled in later by someone else.
 
+This table is a ledger rather than prose, and it is maintained inside the pull request of the issue whose row
+it records. The rule in specification section 16 that documentation is not mixed with code exists to stop a
+substantive specification change from being buried inside a code review; it was written too broadly and is not
+intended to cover a one-row bookkeeping update, which is worth less as a separate pull request than the review
+attention it would consume.
+
 | Plan ID | GitHub issue | Pull request | Status |
 | --- | --- | --- | --- |
-| A1 | 1 | 2 | In review |
+| A1 | 1 | 2 | Merged |
+| A2 | 3 | 8 | In review |
+| A3 | 4 | not yet started | Open |
+| A4 | 5 | not yet started | Open |
+| A5 | 6 | not yet started | Open |
+| A6 | 7 | not yet started | Open |
 
-Plan identifiers A2 through A39 are not yet opened. They are opened after A1 is merged, per the owner's
-instruction that the contract is reviewed before the remaining issues are created.
+Plan identifiers A7 through A39 are not yet opened. Each milestone's issue list is posted for owner
+confirmation before that milestone begins, so M1 issues are opened once M0 is fully merged.
 
 ## Ordering constraints that are not negotiable
 
