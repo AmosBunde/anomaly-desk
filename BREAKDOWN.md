@@ -231,9 +231,9 @@ attention it would consume.
 | Plan ID | GitHub issue | Pull request | Status |
 | --- | --- | --- | --- |
 | A1 | 1 | 2 | Merged |
-| A2 | 3 | 8 | In review |
-| A3 | 4 | not yet started | Open |
-| A4 | 5 | not yet started | Open |
+| A2 | 3 | 8 | Merged |
+| A3 | 4 | 10 | In review |
+| A4 | 5 | 9 | Merged |
 | A5 | 6 | not yet started | Open |
 | A6 | 7 | not yet started | Open |
 

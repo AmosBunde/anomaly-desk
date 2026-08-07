@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anomaly Desk operator console</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --pending: #d29922;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem 1.5rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        line-height: 1.6;
+      }
+      main { max-width: 62rem; margin: 0 auto; }
+      h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+      .sub { color: var(--muted); margin: 0 0 2rem; font-size: 0.9rem; }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.25rem;
+      }
+      h2 { font-size: 0.95rem; margin: 0 0 0.75rem; color: var(--accent); }
+      ul { margin: 0; padding-left: 1.25rem; }
+      li { margin-bottom: 0.35rem; }
+      code {
+        background: #0d1117;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0.05rem 0.35rem;
+        font-size: 0.85em;
+      }
+      .tag {
+        display: inline-block;
+        border: 1px solid var(--pending);
+        color: var(--pending);
+        border-radius: 3px;
+        padding: 0 0.4rem;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+      th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+      th { color: var(--muted); font-weight: normal; }
+      footer { color: var(--muted); font-size: 0.8rem; margin-top: 2rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Anomaly Desk</h1>
+      <p class="sub">Operator console. Agentic triage with a judge scoring it, and an override rate scoring the judge.</p>
+
+      <section>
+        <h2>Status</h2>
+        <p>
+          <span class="tag">A30 pending</span>
+          This page is a placeholder served so the port contract in specification section 15
+          is real from milestone M0 and the container health check has something to check.
+          The queue and detail views are delivered by A30.
+        </p>
+      </section>
+
+      <section>
+        <h2>The two scoreboards</h2>
+        <p>
+          This console is one half of the measurement. Every disposition an operator records
+          here, accept, edit, or override, feeds the second scoreboard. The judge score is
+          never reported without it, and the two are allowed to disagree.
+        </p>
+        <table>
+          <thead>
+            <tr><th>Scoreboard</th><th>Source</th><th>Delivered by</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Judge score</td><td>Automated harness against rubrics</td><td>A13, A14</td></tr>
+            <tr><td>Override rate</td><td>Operator dispositions captured here</td><td>A29, A30, A31</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Stack</h2>
+        <ul>
+          <li>API on <code>:8000</code>, health at <code>/health</code></li>
+          <li>PostgreSQL with pgvector, holding events, triages, citations, and overrides</li>
+          <li>Kafka in KRaft mode, single broker, topic <code>events</code></li>
+          <li>OpenTelemetry collector on <code>:4317</code> and <code>:4318</code></li>
+        </ul>
+      </section>
+
+      <footer>
+        Specification: README.md. Execution plan: BREAKDOWN.md.
+      </footer>
+    </main>
+  </body>
+</html>

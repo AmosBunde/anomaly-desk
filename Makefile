@@ -125,12 +125,23 @@ ui: ## (A30) Run the operator console on :3000
 	$(call pending,make ui,A30)
 
 .PHONY: up
-up: ## (A3) Bring up the full Docker Compose stack
-	$(call pending,make up,A3)
+up: ## Bring up the full Docker Compose stack and wait for health
+	@$(PYTHON) scripts/preflight_ports.py
+	docker compose up --build -d
+	@printf 'Waiting for every service to report healthy...\n'
+	@$(PYTHON) scripts/wait_for_stack.py
 
 .PHONY: down
-down: ## (A3) Stop the Docker Compose stack
-	$(call pending,make down,A3)
+down: ## Stop the Docker Compose stack, keeping volumes
+	docker compose down
+
+.PHONY: clean
+clean: ## Stop the stack and delete its volumes
+	docker compose down --volumes
+
+.PHONY: stack-report
+stack-report: ## Print measured memory use per service against its declared limit
+	@$(PYTHON) scripts/stack_report.py
 
 # ---------------------------------------------------------------------------
 # Kubernetes
