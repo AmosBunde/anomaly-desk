@@ -232,10 +232,14 @@ attention it would consume.
 | --- | --- | --- | --- |
 | A1 | 1 | 2 | Merged |
 | A2 | 3 | 8 | Merged |
-| A3 | 4 | 10 | In review |
+| A3 | 4 | 10 | Merged |
 | A4 | 5 | 9 | Merged |
 | A5 | 6 | not yet started | Open |
 | A6 | 7 | not yet started | Open |
+| A40 | 11 | 12 | In review |
+
+A40 is a defect fix against A3 rather than a planned item, added when an automated security review
+of 923993a found that the stack published every service on all interfaces.
 
 Plan identifiers A7 through A39 are not yet opened. Each milestone's issue list is posted for owner
 confirmation before that milestone begins, so M1 issues are opened once M0 is fully merged.

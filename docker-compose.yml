@@ -18,6 +18,12 @@
 #
 # Memory limits are declared so the stack fails against the budget loudly rather than
 # meeting the kernel out-of-memory killer, which presents as an unexplained container death.
+#
+# Every published port binds to BIND_ADDRESS, which defaults to 127.0.0.1. A Compose mapping
+# written as "5432:5432" binds 0.0.0.0, which on an untrusted network exposes PostgreSQL
+# with its development password and a Kafka broker with no authentication at all. Set
+# BIND_ADDRESS=0.0.0.0 to publish deliberately; the point is that it is then a choice in
+# .env rather than an accident of syntax.
 
 name: anomaly-desk
 
@@ -33,7 +39,7 @@ services:
       # ordering, which would show up much later as an unreproducible retrieval result.
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       # Creates the vector extension on first boot. A8 owns the schema itself.
@@ -84,7 +90,7 @@ services:
       KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
       CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
     ports:
-      - "${KAFKA_PORT:-9092}:9092"
+      - "${BIND_ADDRESS:-127.0.0.1}:${KAFKA_PORT:-9092}:9092"
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
@@ -108,9 +114,9 @@ services:
     volumes:
       - ./docker/otel/config.yaml:/etc/otel/config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "13133:13133" # health_check extension
+      - "${BIND_ADDRESS:-127.0.0.1}:${OTEL_GRPC_PORT:-4317}:4317"   # OTLP gRPC
+      - "${BIND_ADDRESS:-127.0.0.1}:${OTEL_HTTP_PORT:-4318}:4318"   # OTLP HTTP
+      - "${BIND_ADDRESS:-127.0.0.1}:${OTEL_HEALTH_PORT:-13133}:13133" # health_check
     healthcheck:
       test: ["CMD", "/otelcol-contrib", "--version"]
       interval: 10s
@@ -140,7 +146,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: anomaly-desk-api
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,7 +177,7 @@ services:
       dockerfile: ../docker/ui.Dockerfile
     container_name: anomaly-ui
     ports:
-      - "${UI_PORT:-3000}:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:${UI_PORT:-3000}:80"
     depends_on:
       api:
         condition: service_healthy

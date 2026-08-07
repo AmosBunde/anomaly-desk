@@ -11,6 +11,7 @@ service without a health check, a dependant that does not wait for it, a replica
 left at its default of 3 on a single broker, or a memory limit quietly removed.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,26 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPOSE = REPO_ROOT / "docker-compose.yml"
 
 EXPECTED_SERVICES = {"postgres", "kafka", "otel-collector", "api", "ui"}
+
+# Compose interpolation is ${VAR:-default}, so a naive split(":") on a port mapping cuts
+# the default value in half. Blank each expression to a single token before splitting.
+VARIABLE_RE = re.compile(r"\$\{[^}]*\}")
+
+
+def split_port_mapping(mapping: object) -> list[str]:
+    """Split a port mapping into fields, treating ${VAR:-default} as one opaque field."""
+    text = str(mapping)
+    placeholders: list[str] = []
+
+    def stash(match: re.Match[str]) -> str:
+        placeholders.append(match.group(0))
+        return f"\x00{len(placeholders) - 1}\x00"
+
+    masked = VARIABLE_RE.sub(stash, text)
+    fields = masked.split(":")
+    return [
+        re.sub(r"\x00(\d+)\x00", lambda m: placeholders[int(m.group(1))], field) for field in fields
+    ]
 
 
 @pytest.fixture(scope="module")
@@ -130,13 +151,12 @@ def test_host_ports_are_overridable(compose):
     """
     for name in EXPECTED_SERVICES:
         for mapping in compose["services"][name].get("ports", []):
-            host_side = str(mapping).split(":")[0]
-            if host_side.isdigit():
-                # A fixed host port is acceptable only for the collector's OTLP ports,
-                # which nothing else on this machine binds.
-                assert name == "otel-collector", (
-                    f"{name} binds host port {host_side} with no override variable"
-                )
+            fields = split_port_mapping(mapping)
+            host_side = fields[-2]
+            assert not host_side.isdigit(), (
+                f"{name} publishes host port {host_side} with no override variable, so it "
+                "cannot coexist with another stack already holding that port"
+            )
 
 
 def test_api_dockerfile_installs_cpu_only_torch():
@@ -156,3 +176,39 @@ def test_api_dockerfile_installs_cpu_only_torch():
 def test_api_image_runs_as_a_non_root_user():
     dockerfile = (REPO_ROOT / "docker" / "api.Dockerfile").read_text(encoding="utf-8")
     assert "USER appuser" in dockerfile, "the API container must not run as root"
+
+
+@pytest.mark.parametrize("name", sorted(EXPECTED_SERVICES))
+def test_published_ports_bind_to_loopback_by_default(name, compose):
+    """Every published port must carry an explicit bind address defaulting to loopback.
+
+    A Compose mapping written as "5432:5432" binds 0.0.0.0. On an untrusted network that
+    exposes PostgreSQL with its development password and a Kafka broker with no
+    authentication at all, which is the defect an automated review found in 923993a after
+    A3 merged.
+
+    This asserts the shape rather than the runtime binding, so it runs without a daemon and
+    fails when a service is added without a bind address rather than after someone notices.
+    """
+    for mapping in compose["services"][name].get("ports", []):
+        fields = split_port_mapping(mapping)
+        assert len(fields) == 3, (
+            f"{name} publishes {mapping!r} with no bind address, so it binds 0.0.0.0. "
+            'Use "${BIND_ADDRESS:-127.0.0.1}:<host>:<container>".'
+        )
+        bind = fields[0]
+        assert "BIND_ADDRESS" in bind or bind == "127.0.0.1", (
+            f"{name} publishes {mapping!r}; the bind address must default to loopback"
+        )
+        assert "0.0.0.0" not in bind or "BIND_ADDRESS" in bind, (
+            f"{name} binds {bind!r} unconditionally"
+        )
+
+
+def test_bind_address_default_is_loopback(compose):
+    """The default must be loopback everywhere, not merely overridable."""
+    raw = COMPOSE.read_text(encoding="utf-8")
+    assert "${BIND_ADDRESS:-127.0.0.1}" in raw
+    assert "${BIND_ADDRESS:-0.0.0.0}" not in raw, (
+        "defaulting the bind address to 0.0.0.0 defeats the purpose of the variable"
+    )
