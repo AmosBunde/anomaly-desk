@@ -249,12 +249,17 @@ specification section 10, a change that weakens the escalation policy or the mus
 that widens tool scope. Adding a dependency not implied by the specification, and changing the judge model,
 are also owner decisions rather than implementation details.
 
-Two deviations are already pending owner confirmation and are recorded here so they are not mistaken for
-settled decisions. Both concern container topology in A3, both are driven by the measured memory headroom of
-roughly 7 GB on the development machine, and both are written into specification section 2 and the repository
-structure, which is why they need an answer before A3 starts:
+Two container topology deviations were raised with the owner before A3 was started, and both were confirmed.
+They are recorded here as decided rather than assumed, because both are written into specification section 2
+and the repository structure and would be a migration rather than a configuration change to reverse after A18
+and A19 land. Both are driven by the measured memory headroom of roughly 7 GB on the development machine.
 
-1. The vector store is placed inside PostgreSQL using pgvector rather than running as a separate service. The
-   build prompt lists a vector store as a distinct component of the Compose stack, and a strict reading wants
-   a separate container.
-2. Kafka runs as a single broker in KRaft mode with no ZooKeeper container and no replication.
+1. **The vector store is placed inside PostgreSQL using pgvector** rather than running as a separate service.
+   The build prompt lists a vector store as a distinct component of the Compose stack; the owner confirmed
+   that this is a capability requirement rather than a container count. This keeps the citation-to-chunk join
+   inside a single query, which is what makes the judge span verification in specification section 7
+   straightforward. Revisit past roughly one million chunks.
+2. **Kafka runs as a single broker in KRaft mode** with no ZooKeeper container and no replication. Durability
+   buys little here because the event source is a replayable fixed offset list rather than a live production
+   feed, so a lost partition is recovered by re-running `make replay`. The consequence accepted with this
+   choice is that A17 does not exercise real partition rebalance behavior.
