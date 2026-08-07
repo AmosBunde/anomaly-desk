@@ -68,6 +68,14 @@ format: ## Apply ruff formatting
 test: ## Run the test suite
 	$(PYTHON) -m pytest
 
+.PHONY: prose
+prose: ## Enforce the house prose style on tracked Markdown
+	$(PYTHON) scripts/prose_lint.py
+
+.PHONY: check
+check: lint prose test ## Run everything continuous integration runs, in the same order
+	@printf '\033[32mAll local checks passed.\033[0m\n'
+
 # ---------------------------------------------------------------------------
 # Data and retrieval
 # ---------------------------------------------------------------------------
