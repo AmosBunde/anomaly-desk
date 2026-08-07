@@ -22,9 +22,11 @@ assigns.
 - **Depends** lists plan identifiers that must be merged first. An issue with no dependency inside its
   milestone may be worked in parallel with its siblings, but a milestone never starts before the previous
   milestone is fully merged with continuous integration green.
-- **Lines** is the reviewable-changed-line budget, excluding lockfiles, user interface build artifacts, and
-  evaluation run outputs. An issue projected past roughly 400 lines is split before work starts, not merged
-  large.
+- **Lines** is the reviewable-changed-line budget for code, excluding lockfiles, user interface build
+  artifacts, and evaluation run outputs. An issue projected past roughly 400 lines is split before work
+  starts, not merged large. A value of `prose` marks a documentation-only issue, which is held to the separate
+  standard in specification section 16 instead: one document or one closely coupled pair per pull request, and
+  no prose mixed with code.
 - **Body** is the issue template: `P` for Problem, Design, Acceptance criteria, Risks, Out of scope;
   `H` for Hypothesis, Design, Acceptance criteria, Risks, Out of scope.
 
@@ -39,7 +41,7 @@ style, and a Kubernetes path that exists before it is needed at M5. No product l
 
 | Plan ID | Title | Branch slug | Label | Depends | Lines | Body |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1 | Author the technical specification and the issue breakdown | `chore/…-contract` | `type:infra` | none | 400 | P |
+| A1 | Author the technical specification and the issue breakdown | `chore/…-contract` | `type:infra` | none | prose | P |
 | A2 | Python package skeleton, pyproject, and Makefile targets | `chore/…-skeleton` | `type:infra` | A1 | 220 | P |
 | A3 | Docker Compose stack: Kafka in KRaft mode, PostgreSQL with pgvector, API, console, OpenTelemetry collector | `chore/…-compose` | `type:infra` | A2 | 300 | P |
 | A4 | Continuous integration: ruff, pytest, and the prose linter | `chore/…-ci` | `type:infra` | A2 | 200 | P |
@@ -78,7 +80,7 @@ before any agent exists. Hard rule 1 makes this milestone the gate for everythin
 | A12 | Model interface and token ledger | `feat/…-model-interface` | `phase:evalset` | A8 | 280 | P |
 | A13 | Judge harness: rubric scoring and citation span verification | `feat/…-judge` | `phase:evalset` | A10, A12 | 380 | P |
 | A14 | Dual scoreboard and the continuous integration smoke slice | `feat/…-scoreboard` | `phase:evalset` | A13 | 320 | P |
-| A15 | Finding: judge-to-human agreement on the M1 subsample | `docs/…-m1-finding` | `finding` | A14 | 200 | P |
+| A15 | Finding: judge-to-human agreement on the M1 subsample | `docs/…-m1-finding` | `finding` | A14 | prose | P |
 
 Notes:
 
@@ -161,7 +163,7 @@ first written analysis of the two disagreeing.
 | A29 | Operator queue API and disposition persistence | `feat/…-queue-api` | `phase:human` | A28 | 320 | P |
 | A30 | React operator console: queue and detail views | `feat/…-console` | `phase:human` | A29 | 400 | P |
 | A31 | Override-rate scoreboard with field-level edit capture | `feat/…-override-rate` | `phase:human` | A30 | 300 | P |
-| A32 | Finding: judge versus operator disagreement analysis | `docs/…-disagreement` | `finding` | A31 | 240 | P |
+| A32 | Finding: judge versus operator disagreement analysis | `docs/…-disagreement` | `finding` | A31 | prose | P |
 
 Notes:
 
@@ -189,7 +191,7 @@ gate deployment on evaluation regression.
 | A36 | A/B harness scored against override rate | `exp/…-ab-harness` | `exp` | A31, A34 | 320 | H |
 | A37 | Evaluation-regression deploy gate in continuous integration | `feat/…-deploy-gate` | `phase:obs` | A35, A36 | 280 | P |
 | A38 | Kubernetes deployment on kind and deploy/runbook.md | `chore/…-deploy` | `phase:obs` | A5, A37 | 380 | P |
-| A39 | Final results report and the filled section 13 table | `docs/…-results` | `finding` | A38 | 300 | P |
+| A39 | Final results report and the filled section 13 table | `docs/…-results` | `finding` | A38 | prose | P |
 
 Notes:
 

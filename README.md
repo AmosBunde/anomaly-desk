@@ -498,9 +498,16 @@ make deploy gate    # deploy to kind and run the same gate continuous integratio
 
 The repository history is part of the product. Every change is traceable from an issue, through a linked
 branch, to a merged pull request carrying its evidence. One issue maps to one branch and one pull request. A
-pull request targets roughly 150 to 400 reviewable changed lines, where lockfiles, user interface build
-artifacts, and evaluation run outputs do not count. An issue that would exceed that budget is split before
-work starts.
+pull request that changes code targets roughly 150 to 400 reviewable changed lines, where lockfiles, user
+interface build artifacts, and evaluation run outputs do not count. An issue that would exceed that budget is
+split before work starts.
+
+The budget applies to code, not to prose. A specification, a runbook, or a written finding cannot be usefully
+split at four hundred lines, because the reviewer needs the whole argument in front of them to judge any part
+of it; the sibling project's specification is four hundred and seven lines on its own. Documentation pull
+requests are instead held to a different standard: one document or one closely coupled pair per pull request,
+and no mixing of prose with code changes in the same pull request. A documentation pull request that touches
+code, or that revises two unrelated documents, is split.
 
 ### 16.1 One-time setup: labels and milestones
 
