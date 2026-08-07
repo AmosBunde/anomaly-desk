@@ -59,7 +59,11 @@ Notes that shape these six issues:
   requests is not credible; enforcing it with a grep-based check in continuous integration is. This check
   found a real defect in A1 that two readings had missed, which is the empirical argument for it.
 - A5 installs `kind`, `kubectl`, and `helm`, none of which are present on the development machine. This lands
-  at M0 rather than M5 so the gap is discovered now rather than at the deployment milestone.
+  at M0 rather than M5 so the gap is discovered now rather than at the deployment milestone. It measured the
+  idle control plane at 655 MB against the Compose stack's 658 MB, 1.3 GB together with 5.9 GB still available,
+  so **memory is not the constraint A38 has to plan around. Host ports are:** both the cluster and the Compose
+  stack publish the API and the console, so running them together requires different ports for each, or the
+  Compose stack stopped first. `deploy/runbook.md` at A38 records that rather than a memory limit.
 - A6 carries a check that fails continuous integration when the Mermaid source in `README.md` and
   `docs/architecture.html` drift apart, so the synchronization requirement is mechanical rather than
   aspirational.
@@ -234,7 +238,7 @@ attention it would consume.
 | A2 | 3 | 8 | Merged |
 | A3 | 4 | 10 | Merged |
 | A4 | 5 | 9 | Merged |
-| A5 | 6 | not yet started | Open |
+| A5 | 6 | 13 | In review |
 | A6 | 7 | not yet started | Open |
 | A40 | 11 | 12 | In review |
 
