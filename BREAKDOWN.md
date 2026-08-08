@@ -241,7 +241,8 @@ attention it would consume.
 | A5 | 6 | 13 | In review |
 | A6 | 7 | 14 | Merged |
 | A41 | 15 | 16 | Merged |
-| A7 | 17 | 18 | In review |
+| A7 | 17 | 18 | Merged |
+| A8 | 18 | 27 | In review |
 | A40 | 11 | 12 | Merged |
 
 A40 and A41 are defect fixes against merged work rather than planned items. A40 is a defect fix against A3, added when an automated security review
