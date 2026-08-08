@@ -164,11 +164,25 @@ sequenceDiagram
     Note over O,Q: step budget exhausted or agent failure always ends in a queue entry
 ```
 
-The diagrams above are also maintained as a dark-themed, self-contained page at
-[`docs/architecture.html`](docs/architecture.html), with JetBrains Mono, semantic component colors, boundary
-boxes for the agent workflow and the evaluation plane, and a legend outside every boundary. Any pull request
-that moves a component boundary, adds an agent, or changes a store updates the Mermaid source above and the
-rendered page in the same pull request.
+The diagrams above are also maintained as interactive, dark-themed pages generated with Archify:
+[`docs/architecture.html`](docs/architecture.html) for the system diagram and
+[`docs/triage-sequence.html`](docs/triage-sequence.html) for the sequence. Both carry semantic component
+colors, boundary boxes for the agent workflow and the evaluation plane, and a legend outside every boundary,
+and both are validated at Archify's showcase profile, which checks routing, corridors, label clearance, and
+legend placement rather than leaving them to review.
+
+The Archify specifications live in `architecture/`. Because Archify favors roughly twelve primary nodes and the
+Mermaid source above declares twenty-one, some nodes are merged, and every merge is declared with a reason in
+`architecture/consolidations.json`. One of them increases fidelity rather than reducing it: pgvector runs
+inside the PostgreSQL container, so the two Mermaid nodes are one component in the rendered diagram.
+
+Any pull request that moves a component boundary, adds an agent, or changes a store updates the Mermaid source
+above and the Archify specifications in the same pull request. `scripts/diagram_sync.py` compares them and
+fails when a node, an edge, or a boundary exists in one and not the other, so a silent divergence cannot merge.
+
+The pages load JetBrains Mono from Google Fonts. That is a documented departure from a strictly offline page,
+and it was verified with all network blocked: both render completely and fall back to the local monospace
+stack. No script, image, or stylesheet the pages depend on is remote.
 
 ## 3. Repository structure
 
