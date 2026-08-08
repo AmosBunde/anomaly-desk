@@ -1,0 +1,78 @@
+# Pinned event sources. Every field here is recorded in docs/sources.md in prose as well;
+# this file is what scripts/fetch_sources.py reads and what the tests assert against, so the
+# two cannot drift.
+#
+# sha256 pins the exact snapshot. A source changing under us is a loud failure rather than a
+# silent change in the labeled set, which would invalidate every comparison made against it.
+#
+# sha256 values are quoted deliberately: an unquoted all-digit hash is parsed by YAML as an
+# integer and would then never compare equal to the hex string computed at runtime.
+
+version: 1
+
+citation: >-
+  Jieming Zhu, Shilin He, Pinjia He, Jinyang Liu, Michael R. Lyu. Loghub: A Large Collection
+  of System Log Datasets for AI-driven Log Analytics. In ISSRE, 2023.
+
+sources:
+  - id: loghub-hdfs
+    origin: https://raw.githubusercontent.com/logpai/loghub/master/HDFS/HDFS_2k.log
+    upstream: https://github.com/logpai/loghub
+    license: LogHub dataset license, free for research or academic work
+    license_url: https://github.com/logpai/loghub/blob/master/LICENSE
+    redistributable: true
+    redistribution_conditions: >-
+      Attribution to the loghub repository URL, citation of the loghub paper, and inclusion
+      of the license notice in all copies.
+    retrieved: 2026-08-08
+    records: 2000
+    sha256: "7c967000980c086ed55fa6544ba4f05fe66d44622795e890c68caf8bbb635035"
+    redactions: none
+    kind: log_burst
+    service: hdfs
+    note: >-
+      Hadoop Distributed File System logs. Block replication, datanode, and namenode events.
+      Chosen for capacity and dependency style failures.
+
+  - id: loghub-openstack
+    origin: https://raw.githubusercontent.com/logpai/loghub/master/OpenStack/OpenStack_2k.log
+    upstream: https://github.com/logpai/loghub
+    license: LogHub dataset license, free for research or academic work
+    license_url: https://github.com/logpai/loghub/blob/master/LICENSE
+    redistributable: true
+    redistribution_conditions: >-
+      Attribution to the loghub repository URL, citation of the loghub paper, and inclusion
+      of the license notice in all copies.
+    retrieved: 2026-08-08
+    records: 2000
+    sha256: "025a1bc64ff5b2ef4a4bda6c4ad5c5c5f18478b71cd1ad2b0676e01625629f2f"
+    redactions: none
+    kind: api_log
+    service: nova
+    note: >-
+      OpenStack Nova compute logs. Instance lifecycle and API request events. Chosen for
+      configuration and dependency style failures.
+
+  - id: loghub-bgl
+    origin: https://raw.githubusercontent.com/logpai/loghub/master/BGL/BGL_2k.log
+    upstream: https://github.com/logpai/loghub
+    license: LogHub dataset license, free for research or academic work
+    license_url: https://github.com/logpai/loghub/blob/master/LICENSE
+    redistributable: true
+    redistribution_conditions: >-
+      Attribution to the loghub repository URL, citation of the loghub paper, and inclusion
+      of the license notice in all copies.
+    retrieved: 2026-08-08
+    records: 2000
+    sha256: "2a819ea540909db682005c9cf948387a40729b5c2e9f19d430e29ce704825496"
+    redactions: none
+    kind: hardware_alert
+    service: bluegene
+    note: >-
+      Blue Gene/L supercomputer logs, already labeled upstream as alert or non-alert. Chosen
+      for hardware failures and because the upstream alert flag is a useful sanity check on
+      severity labeling, though it is never used as a gold label.
+
+# Size of the committed demo slice per source. Kept small so the repository stays reviewable
+# while docker compose up plus make eval works from a clean checkout.
+demo_slice_records: 120

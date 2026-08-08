@@ -240,14 +240,16 @@ attention it would consume.
 | A4 | 5 | 9 | Merged |
 | A5 | 6 | 13 | In review |
 | A6 | 7 | 14 | Merged |
-| A41 | 15 | 16 | In review |
+| A41 | 15 | 16 | Merged |
+| A7 | 17 | 18 | In review |
 | A40 | 11 | 12 | Merged |
 
 A40 and A41 are defect fixes against merged work rather than planned items. A40 is a defect fix against A3, added when an automated security review
 of 923993a found that the stack published every service on all interfaces. A41 redraws the architecture
 diagrams with the Archify skill at the owner's request, replacing the hand-written generator A6 delivered.
 
-Plan identifiers A7 through A39 are not yet opened. Each milestone's issue list is posted for owner
+Milestone M1 is opened as A7 through A15 (issues 17 to 25). Plan identifiers A16 through A39 are not
+yet opened. Each milestone's issue list is posted for owner
 confirmation before that milestone begins, so M1 issues are opened once M0 is fully merged.
 
 ## Ordering constraints that are not negotiable
