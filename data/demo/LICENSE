@@ -1,0 +1,14 @@
+The log samples in this directory are redistributed from the loghub collection.
+
+Upstream: https://github.com/logpai/loghub
+
+The datasets are freely available for research or academic work, subject to the
+following condition: for any usage or distribution of the loghub datasets, refer to
+the loghub repository URL and cite the loghub paper. This notice is included in all
+copies, as the upstream license requires.
+
+Citation:
+  Jieming Zhu, Shilin He, Pinjia He, Jinyang Liu, Michael R. Lyu. Loghub: A Large Collection of System Log Datasets for AI-driven Log Analytics. In ISSRE, 2023.
+
+Per-source origin, license, retrieval date, record count, and snapshot hash are
+recorded in configs/sources.yaml and docs/sources.md.

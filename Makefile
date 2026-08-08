@@ -82,8 +82,13 @@ check: lint prose test ## Run everything continuous integration runs, in the sam
 # ---------------------------------------------------------------------------
 
 .PHONY: data
-data: ## (A9) Fetch and normalize pinned sources, assign offsets
-	$(call pending,make data,A9)
+data: ## Fetch pinned sources, verify hashes, cut the demo slice
+	$(PYTHON) scripts/fetch_sources.py
+	@printf '\033[33mNormalization and offset assignment arrive with A9.\033[0m\n'
+
+.PHONY: verify-sources
+verify-sources: ## Verify cached snapshots against their pinned hashes
+	$(PYTHON) scripts/fetch_sources.py --verify-only
 
 .PHONY: index
 index: ## (A19) Chunk runbooks with provenance, embed, load pgvector
