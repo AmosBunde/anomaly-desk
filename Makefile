@@ -86,6 +86,14 @@ data: ## Fetch pinned sources, verify hashes, cut the demo slice
 	$(PYTHON) scripts/fetch_sources.py
 	@printf '\033[33mNormalization and offset assignment arrive with A9.\033[0m\n'
 
+.PHONY: migrate
+migrate: ## Apply forward-only SQL migrations against the Compose PostgreSQL
+	$(PYTHON) scripts/migrate.py
+
+.PHONY: migrate-check
+migrate-check: ## Report pending migrations without applying them
+	$(PYTHON) scripts/migrate.py --check
+
 .PHONY: verify-sources
 verify-sources: ## Verify cached snapshots against their pinned hashes
 	$(PYTHON) scripts/fetch_sources.py --verify-only
