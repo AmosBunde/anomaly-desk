@@ -1,0 +1,54 @@
+{
+  "note": "Maps every node in the README.md section 2 Mermaid source to the Archify component that represents it. Archify's showcase profile favours roughly twelve primary nodes against the Mermaid source's twenty-one, so some nodes are merged. Every merge is declared here with a reason so scripts/diagram_sync.py can verify it was intended rather than accidental, and so a reviewer can reject any single merge. A null target means the node is carried in a card rather than as a component.",
+  "map": {
+    "sources": "sources",
+    "producer": "producer",
+    "replayer": "producer",
+    "kafka": "kafka",
+    "consumer": "consumer",
+    "dlq": "consumer",
+    "orch": "orch",
+    "classifier": "classifier",
+    "retriever": "retriever",
+    "drafter": "drafter",
+    "policy": "policy",
+    "pg": "store",
+    "vec": "store",
+    "queue": "console",
+    "console": "console",
+    "labeled": "judge",
+    "redteam": "judge",
+    "judge": "judge",
+    "board": "board",
+    "otel": null,
+    "cost": null
+  },
+  "reasons": {
+    "replayer": "The producer and the replayer are one ingestion path, differing only in whether offsets come from the live source or from evalset/replay_offsets.json.",
+    "dlq": "The dead letter queue is a topic the consumer writes to on a schema violation, not a separate service. It is carried in the consumer sublabel.",
+    "vec": "pgvector runs inside the PostgreSQL container. A3 confirmed that as the deployed topology, and it is why the citation-to-chunk join stays inside a single query. One node is more truthful than two.",
+    "queue": "The operator queue is a view of the operator console, which is one service.",
+    "labeled": "The labeled event set is an input the judge reads, not a running component.",
+    "redteam": "The red-team set is an input the judge reads, not a running component.",
+    "otel": "Observability is cross-cutting. Its edges were the longest diagonals in the previous hand-drawn rendering, and it is carried in a card instead.",
+    "cost": "The token and cost ledger is a table inside PostgreSQL and a reporting concern, carried in the same card as observability.",
+    "pg": "PostgreSQL is the surviving store; the Archify component is named store because it carries both the relational tables and the vector index."
+  },
+  "sequence_map": {
+    "K": "kafka",
+    "C": "consumer",
+    "O": "orch",
+    "CL": "classifier",
+    "R": "retriever",
+    "V": "store",
+    "D": "drafter",
+    "P": null,
+    "Q": "queue",
+    "S": "store"
+  },
+  "sequence_reasons": {
+    "V": "Same consolidation as the architecture diagram: pgvector is inside PostgreSQL, so the two Mermaid lifelines are one.",
+    "S": "Same consolidation as the architecture diagram.",
+    "P": "The escalation policy is configuration the orchestrator reads, not a participant that receives messages. It appears as a note on the escalate message."
+  }
+}

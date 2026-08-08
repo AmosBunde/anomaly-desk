@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Anomaly Desk triage sequence",
+    "subtitle": "One event from Kafka offset to persisted triage, with typed hops and a guaranteed queue entry",
+    "output": "docs/triage-sequence.html",
+    "viewBox": [
+      1120,
+      900
+    ],
+    "quality_profile": "showcase",
+    "visual_preset": "blueprint",
+    "views": [
+      {
+        "id": "claim",
+        "label": "Claim before work",
+        "focus": [
+          "kafka",
+          "consumer",
+          "store"
+        ],
+        "note": "An event is claimed by idempotency key before triage begins, so a redelivery cannot produce a second triage."
+      },
+      {
+        "id": "typed-hops",
+        "label": "Typed hops",
+        "focus": [
+          "orch",
+          "classifier",
+          "retriever",
+          "drafter"
+        ],
+        "note": "Each agent returns a schema the orchestrator validates. A violation is counted and ends the triage in the queue."
+      },
+      {
+        "id": "never-dropped",
+        "label": "Never silently dropped",
+        "focus": [
+          "orch",
+          "queue",
+          "store"
+        ],
+        "note": "Escalation is decided by the orchestrator reading versioned policy, and every failure path still reaches an operator."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "kafka",
+      "type": "messagebus",
+      "label": "Kafka",
+      "sublabel": "topic: events"
+    },
+    {
+      "id": "consumer",
+      "type": "backend",
+      "label": "Consumer",
+      "sublabel": "idempotency, retry"
+    },
+    {
+      "id": "orch",
+      "type": "backend",
+      "label": "Orchestrator",
+      "sublabel": "step budget"
+    },
+    {
+      "id": "classifier",
+      "type": "backend",
+      "label": "Classifier",
+      "sublabel": "severity, category"
+    },
+    {
+      "id": "retriever",
+      "type": "backend",
+      "label": "Retrieval",
+      "sublabel": "runbook lookup"
+    },
+    {
+      "id": "drafter",
+      "type": "backend",
+      "label": "Drafting",
+      "sublabel": "cited actions"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "with pgvector"
+    },
+    {
+      "id": "queue",
+      "type": "frontend",
+      "label": "Operators",
+      "sublabel": "queue, human loop"
+    }
+  ],
+  "segments": [
+    {
+      "from": 152,
+      "to": 320,
+      "label": "Claim and validate"
+    },
+    {
+      "from": 336,
+      "to": 660,
+      "label": "Typed agent hops"
+    },
+    {
+      "from": 676,
+      "to": 790,
+      "label": "Escalate and persist"
+    }
+  ],
+  "messages": [
+    {
+      "id": "event",
+      "from": "kafka",
+      "to": "consumer",
+      "y": 186,
+      "label": "event at offset N",
+      "variant": "emphasis"
+    },
+    {
+      "id": "claim",
+      "from": "consumer",
+      "to": "store",
+      "y": 228,
+      "label": "claim by idempotency key",
+      "variant": "default"
+    },
+    {
+      "id": "notdup",
+      "from": "store",
+      "to": "consumer",
+      "y": 266,
+      "label": "new, not a duplicate",
+      "variant": "return"
+    },
+    {
+      "id": "validated",
+      "from": "consumer",
+      "to": "orch",
+      "y": 310,
+      "label": "validated Event",
+      "variant": "emphasis",
+      "note": "A schema violation here routes to the dead letter queue and is counted."
+    },
+    {
+      "id": "toclass",
+      "from": "orch",
+      "to": "classifier",
+      "y": 356,
+      "label": "Event",
+      "variant": "default"
+    },
+    {
+      "id": "classification",
+      "from": "classifier",
+      "to": "orch",
+      "y": 394,
+      "label": "Classification",
+      "variant": "return"
+    },
+    {
+      "id": "toret",
+      "from": "orch",
+      "to": "retriever",
+      "y": 438,
+      "label": "Classification + Event",
+      "variant": "default"
+    },
+    {
+      "id": "search",
+      "from": "retriever",
+      "to": "store",
+      "y": 478,
+      "label": "search runbooks",
+      "variant": "default"
+    },
+    {
+      "id": "chunks",
+      "from": "store",
+      "to": "retriever",
+      "y": 516,
+      "label": "chunks with provenance",
+      "variant": "return"
+    },
+    {
+      "id": "evidence",
+      "from": "retriever",
+      "to": "orch",
+      "y": 556,
+      "label": "Evidence",
+      "variant": "return"
+    },
+    {
+      "id": "todraft",
+      "from": "orch",
+      "to": "drafter",
+      "y": 600,
+      "label": "Classification + Evidence",
+      "variant": "default"
+    },
+    {
+      "id": "draft",
+      "from": "drafter",
+      "to": "orch",
+      "y": 640,
+      "label": "Draft with citations",
+      "variant": "return",
+      "note": "Every action carries a citation drawn from the evidence actually returned."
+    },
+    {
+      "id": "escalate",
+      "from": "orch",
+      "to": "queue",
+      "y": 692,
+      "label": "escalate below threshold",
+      "variant": "security",
+      "note": "Decided by the orchestrator reading configs/escalation.yaml, never by an agent."
+    },
+    {
+      "id": "persist",
+      "from": "orch",
+      "to": "store",
+      "y": 740,
+      "label": "persist triage, tokens, cost",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "consumer",
+      "from": 222,
+      "to": 316,
+      "type": "backend"
+    },
+    {
+      "participant": "orch",
+      "from": 305,
+      "to": 748,
+      "type": "backend"
+    },
+    {
+      "participant": "classifier",
+      "from": 350,
+      "to": 400,
+      "type": "backend"
+    },
+    {
+      "participant": "retriever",
+      "from": 432,
+      "to": 562,
+      "type": "backend"
+    },
+    {
+      "participant": "drafter",
+      "from": 594,
+      "to": 646,
+      "type": "backend"
+    },
+    {
+      "participant": "queue",
+      "from": 686,
+      "to": 748,
+      "type": "frontend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Typed contracts",
+      "items": [
+        "Classification, Evidence, and Draft are validated schemas",
+        "A violation is counted and ends the triage in the operator queue",
+        "No stage receives free text from the stage before it"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Idempotency first",
+      "items": [
+        "The claim precedes any agent work",
+        "A redelivered event is skipped rather than triaged twice",
+        "Replay of a fixed offset list is therefore safe to repeat"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Nothing is dropped",
+      "items": [
+        "Escalation is read from versioned policy by the orchestrator",
+        "A step budget exhaustion still produces a queue entry",
+        "Tokens and cost are persisted with the triage, not derived later"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,401 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Anomaly Desk",
+    "subtitle": "Agentic triage of a streaming event feed, scored by a judge and by the operator override rate",
+    "output": "docs/architecture.html",
+    "visual_preset": "blueprint",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "triage-path",
+        "label": "One event through triage",
+        "focus": [
+          "sources",
+          "producer",
+          "kafka",
+          "consumer",
+          "orch"
+        ],
+        "note": "The main path: a pinned source event is normalized, replayed at a fixed offset, and validated before any agent sees it."
+      },
+      {
+        "id": "typed-hops",
+        "label": "Typed contracts between agents",
+        "focus": [
+          "orch",
+          "classifier",
+          "retriever",
+          "drafter"
+        ],
+        "note": "Every hop returns a schema the next stage validates. A violation is counted, never reinterpreted."
+      },
+      {
+        "id": "two-scoreboards",
+        "label": "Two scoreboards that may disagree",
+        "focus": [
+          "judge",
+          "board",
+          "console",
+          "store"
+        ],
+        "note": "The judge scores rubrics and citation spans; the override rate comes from real operator dispositions."
+      },
+      {
+        "id": "human-loop",
+        "label": "Nothing is silently dropped",
+        "focus": [
+          "orch",
+          "policy",
+          "console"
+        ],
+        "note": "Escalation is policy in configuration, and every failure path ends in an operator queue entry."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "sources",
+      "type": "external",
+      "label": "Pinned sources",
+      "sublabel": "logs, alerts, tickets",
+      "tag": "untrusted",
+      "pos": [
+        40,
+        320
+      ],
+      "size": [
+        152,
+        62
+      ]
+    },
+    {
+      "id": "producer",
+      "type": "backend",
+      "label": "Producer and replayer",
+      "sublabel": "normalize, assign offsets",
+      "tag": "A9, A16",
+      "pos": [
+        256,
+        320
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "kafka",
+      "type": "messagebus",
+      "label": "Kafka KRaft",
+      "sublabel": "topic: events",
+      "tag": "single broker",
+      "pos": [
+        484,
+        320
+      ],
+      "size": [
+        152,
+        62
+      ]
+    },
+    {
+      "id": "consumer",
+      "type": "backend",
+      "label": "Consumer",
+      "sublabel": "idempotency, retry, DLQ",
+      "tag": "A17",
+      "pos": [
+        700,
+        320
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "orch",
+      "type": "backend",
+      "label": "Orchestrator",
+      "sublabel": "step budget, degraded fallback",
+      "tag": "A25",
+      "pos": [
+        928,
+        320
+      ],
+      "size": [
+        176,
+        62
+      ]
+    },
+    {
+      "id": "classifier",
+      "type": "backend",
+      "label": "Classifier agent",
+      "sublabel": "severity and category",
+      "tag": "A23",
+      "pos": [
+        1180,
+        150
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "retriever",
+      "type": "backend",
+      "label": "Retrieval agent",
+      "sublabel": "runbook lookup",
+      "tag": "A23",
+      "pos": [
+        1180,
+        320
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "drafter",
+      "type": "backend",
+      "label": "Drafting agent",
+      "sublabel": "cited remediation draft",
+      "tag": "A24",
+      "pos": [
+        1180,
+        490
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Escalation policy",
+      "sublabel": "configs/escalation.yaml",
+      "tag": "versioned",
+      "pos": [
+        928,
+        620
+      ],
+      "size": [
+        176,
+        62
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "PostgreSQL and pgvector",
+      "sublabel": "triages, citations, overrides",
+      "tag": "one store",
+      "pos": [
+        1468,
+        150
+      ],
+      "size": [
+        180,
+        62
+      ]
+    },
+    {
+      "id": "console",
+      "type": "frontend",
+      "label": "Operator console",
+      "sublabel": "queue, accept, edit, override",
+      "tag": "A29, A30",
+      "pos": [
+        1468,
+        620
+      ],
+      "size": [
+        180,
+        62
+      ]
+    },
+    {
+      "id": "judge",
+      "type": "backend",
+      "label": "Judge",
+      "sublabel": "rubrics, span verification",
+      "tag": "pinned model",
+      "pos": [
+        1756,
+        150
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "board",
+      "type": "external",
+      "label": "Dual scoreboard",
+      "sublabel": "judge score and override rate",
+      "tag": "both, always",
+      "pos": [
+        1756,
+        620
+      ],
+      "size": [
+        180,
+        62
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Agent workflow boundary",
+      "wraps": [
+        "orch",
+        "classifier",
+        "retriever",
+        "drafter",
+        "policy"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Evaluation plane",
+      "wraps": [
+        "judge",
+        "board"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "sources",
+      "to": "producer",
+      "variant": "emphasis"
+    },
+    {
+      "from": "producer",
+      "to": "kafka",
+      "variant": "emphasis"
+    },
+    {
+      "from": "kafka",
+      "to": "consumer",
+      "variant": "emphasis"
+    },
+    {
+      "from": "consumer",
+      "to": "orch",
+      "variant": "emphasis"
+    },
+    {
+      "from": "orch",
+      "to": "classifier"
+    },
+    {
+      "from": "orch",
+      "to": "retriever"
+    },
+    {
+      "from": "orch",
+      "to": "drafter"
+    },
+    {
+      "from": "orch",
+      "to": "policy"
+    },
+    {
+      "from": "orch",
+      "to": "console",
+      "variant": "dashed"
+    },
+    {
+      "from": "orch",
+      "to": "store",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "from": "retriever",
+      "to": "store"
+    },
+    {
+      "from": "drafter",
+      "to": "store"
+    },
+    {
+      "from": "policy",
+      "to": "console",
+      "label": "escalate",
+      "variant": "security",
+      "labelDy": 20
+    },
+    {
+      "from": "console",
+      "to": "store"
+    },
+    {
+      "from": "store",
+      "to": "judge",
+      "variant": "dashed"
+    },
+    {
+      "from": "judge",
+      "to": "board",
+      "label": "quality",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "store",
+      "to": "board",
+      "label": "override rate",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Typed contracts",
+      "items": [
+        "Every hop returns a schema the next stage validates",
+        "A violation is counted and reported, never reinterpreted",
+        "Free-text handoffs between agents are prohibited"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Untrusted event text",
+      "items": [
+        "Classifier and drafting agents hold no tools at all",
+        "Retrieval holds one read-only search tool",
+        "Side-effecting actions need operator confirmation in the orchestrator, never in a prompt"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two scoreboards, both reported",
+      "items": [
+        "Judge score comes from rubrics and verified citation spans",
+        "Override rate comes from real operator dispositions",
+        "When they disagree the disagreement is written up, not resolved by preference"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Consolidated from the specification",
+      "items": [
+        "pgvector runs inside PostgreSQL, so state is one node",
+        "Producer and replayer are one path differing only in offset source",
+        "Observability is cross-cutting and carried here rather than as nodes"
+      ]
+    }
+  ]
+}
